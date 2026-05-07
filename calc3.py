@@ -3,7 +3,7 @@ from itertools import combinations
 
 import numpy as np
 from matplotlib import pyplot as plt
-
+import myprint
 
 def compute_weighted_ranges_simple(epoch_vectors, weights, tolerance):
     epoch_vectors = [np.asarray(v, dtype=float) for v in epoch_vectors]
@@ -14,7 +14,8 @@ def compute_weighted_ranges_simple(epoch_vectors, weights, tolerance):
 
     for k, epoch in enumerate(epoch_vectors):
         r = sin_alpha * np.sum(epoch * weights)
-        delta = np.ceil (r / weights).astype(int)
+        # delta = np.ceil (r / weights).astype(int)
+        delta = np.ceil(r / weights)
         sum_limits = np.sum(epoch * weights)
 
         result[f"epoch_{k}"] = {
@@ -29,39 +30,15 @@ def compute_weighted_ranges_simple(epoch_vectors, weights, tolerance):
 
     return result
 
-def pretty_print_weighted_ranges_simple(result, decimals=4):
-    print("=" * 72)
-    print("WEIGHTED RANGE RESULT")
-    print("=" * 72)
-    print()
-
-    for epoch_name, data in result.items():
-        print("-" * 72)
-        print(epoch_name.upper())
-        print("-" * 72)
-
-        print(f"epoch_vector = {data['epoch_vector']}")
-        print(f"sumLimit = {data['sum_limits']}")
-        print(f"limits = {data['limits']}")
-        print(f"delta        = {np.array2string(data['delta'], precision=decimals)}")
-        print(f"radius       =  {data['radius']}")
-        print()
-
-        print("ranges:")
-        for i, (mn, mx) in enumerate(zip(data["min_replicas"], data["max_replicas"])):
-            width = mx - mn
-            print(f"  coord[{i}] : [{mn}, {mx}]  (width={width})")
-        print()
-
 
 epoch_vectors = [
     [21, 25, 5, 6],
-    [11, 19, 1, 26],
-    [42, 3, 6, 9],
-    [8, 34, 5, 11],
+    # [11, 19, 1, 26],
+    # [42, 3, 6, 9],
+    # [8, 34, 5, 11],
 ]
 
-weights = [400, 700, 300, 1200]
+weights = [400, 400, 100, 1200]
 tolerance = 0.99
 
 result = compute_weighted_ranges_simple(
@@ -69,6 +46,7 @@ result = compute_weighted_ranges_simple(
     weights=weights,
     tolerance=tolerance,
 )
+
 
 
 from itertools import combinations
@@ -97,13 +75,18 @@ def plot_all_2d_projections(result):
 
         for idx, (i, j) in enumerate(pairs):
             ax = axes[idx]
-            ax.set_xlim(0, 60)
-            ax.set_ylim(0, 60)
+            # ax.set_xlim(-10, 60)
+            # ax.set_ylim(-10, 60)
+            # x = epoch[i]  * weights[i]
+            # y = epoch[j]  * weights[j]
             x = epoch[i]
             y = epoch[j]
+
             dx = delta[i]
             dy = delta[j]
 
+            # xmin, xmax = mins[i] * weights[i], maxs[i] * weights[i]
+            # ymin, ymax = mins[j] * weights[j], maxs[j] * weights[j]
             xmin, xmax = mins[i], maxs[i]
             ymin, ymax = mins[j], maxs[j]
 
@@ -124,24 +107,33 @@ def plot_all_2d_projections(result):
             ax.scatter([x, x], [ymin, ymax])
 
             # --- две прямые по косинусному отклонению ---
-            vec = np.array([x, y], dtype=float)
-            norm = np.linalg.norm(vec)
+            vec_w = np.array([x, y], dtype=float)
+            # vec_w = np.array([x, y], dtype=float)
 
-            if norm > 1e-12:
-                u = vec / norm
-                u_perp = np.array([-u[1], u[0]])
+            norm_w = np.linalg.norm(vec_w)
+
+            if norm_w > 1e-12:
+                u_w = vec_w / norm_w
+                u_perp_w = np.array([-u_w[1], u_w[0]])
                 sin_alpha = math.sqrt(max(0.0, 1.0 - tolerance ** 2))
 
-                d1 = tolerance * u + sin_alpha * u_perp
-                d2 = tolerance * u - sin_alpha * u_perp
+                d1_w = tolerance * u_w + sin_alpha * u_perp_w
+                d2_w = tolerance * u_w - sin_alpha * u_perp_w
 
-                # длина прямых до края графика
+                # обратно в обычные координаты
+                d1 = np.array([d1_w[0], d1_w[1]], dtype=float)
+                d2 = np.array([d2_w[0], d2_w[1]], dtype=float)
+                # d1 = np.array([d1_w[0] * weights[i], d1_w[1] * weights[j]], dtype=float)
+                # d2 = np.array([d2_w[0] * weights[i], d2_w[1] * weights[j]], dtype=float)
+
+                # нормируем только для удобства рисования
+                d1 = d1 / np.linalg.norm(d1)
+                d2 = d2 / np.linalg.norm(d2)
+
                 L = max(ax.get_xlim()[1], ax.get_ylim()[1])
 
-                # рисуем лучи из начала координат
                 ax.plot([0, L * d1[0]], [0, L * d1[1]], linestyle="--")
                 ax.plot([0, L * d2[0]], [0, L * d2[1]], linestyle="--")
-
             # подписи
             # ax.set_title(f"({i}, {j})")
             ax.set_xlabel(f"coord[{i}]")
@@ -159,5 +151,5 @@ def plot_all_2d_projections(result):
         plt.tight_layout()
         plt.show()
 
-pretty_print_weighted_ranges_simple(result)
+myprint.pretty_print_weighted_ranges_simple(result)
 plot_all_2d_projections(result)
