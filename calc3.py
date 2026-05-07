@@ -13,9 +13,10 @@ def compute_weighted_ranges_simple(epoch_vectors, weights, tolerance):
     result = {}
 
     for k, epoch in enumerate(epoch_vectors):
-        r = sin_alpha * np.sum(epoch * weights)
+        r = sin_alpha * np.linalg.norm(epoch * weights)
+        # r = sin_alpha * np.sum(epoch * weights)
         # delta = np.ceil (r / weights).astype(int)
-        delta = np.ceil(r / weights)
+        delta = (r / weights)
         sum_limits = np.sum(epoch * weights)
 
         result[f"epoch_{k}"] = {
@@ -24,8 +25,8 @@ def compute_weighted_ranges_simple(epoch_vectors, weights, tolerance):
             "radius" : r,
             "epoch_vector": epoch.astype(int),
             "delta": delta,
-            "min_replicas": np.maximum(epoch - delta, 0).astype(int),
-            "max_replicas": (epoch + delta).astype(int),
+            "min_replicas": np.maximum(epoch - delta, 0),
+            "max_replicas": (epoch + delta)
         }
 
     return result
@@ -46,14 +47,6 @@ result = compute_weighted_ranges_simple(
     weights=weights,
     tolerance=tolerance,
 )
-
-
-
-from itertools import combinations
-import math
-import numpy as np
-import matplotlib.pyplot as plt
-
 
 def plot_all_2d_projections(result):
     for epoch_name, data in result.items():
@@ -150,6 +143,7 @@ def plot_all_2d_projections(result):
         , fontsize=16)
         plt.tight_layout()
         plt.show()
+
 
 myprint.pretty_print_weighted_ranges_simple(result)
 plot_all_2d_projections(result)
